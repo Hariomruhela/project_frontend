@@ -2,53 +2,98 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-// import { FaFlag, FaRegFlag } from "react-icons/fa";
+
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const navigate = useNavigate();
-// ✅ Toggle Visibility
-const handleToggleVisibility = (id) => {
-  const updatedProjects = projects.map((project) =>
-    project.id === id
-      ? { ...project, showProject: !project.showProject }
-      : project
-  );
 
-  localStorage.setItem(
-    "projects",
-    JSON.stringify(updatedProjects)
-  );
+  const token = localStorage.getItem("token");
 
-  setProjects(updatedProjects);
+  // ✅ Fetch Projects from API
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/projects/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-  toast.success("Visibility Updated 🚀");
-};
-  // Load projects
+      if (response.status === 401) {
+        toast.error("Session expired ❌");
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      const data = await response.json();
+      setProjects(data);
+    } catch (error) {
+      toast.error("Failed to load projects ❌");
+    }
+  };
+
   useEffect(() => {
-    const savedProjects =
-      JSON.parse(localStorage.getItem("projects")) || [];
-    setProjects(savedProjects);
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    fetchProjects();
   }, []);
 
-  // ✅ Delete Project
-  const handleDelete = (id) => {
+  // ✅ Toggle Visibility (API)
+  const handleToggleVisibility = async (id) => {
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/projects/${id}/toggle`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update visibility");
+      }
+
+      toast.success("Visibility Updated 🚀");
+      fetchProjects();
+    } catch (error) {
+      toast.error("Error updating visibility ❌");
+    }
+  };
+
+  // ✅ Delete Project (API)
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Are you sure?");
     if (!confirmDelete) return;
 
-    const updatedProjects = projects.filter(
-      (project) => project.id !== id
-    );
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/projects/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    localStorage.setItem(
-      "projects",
-      JSON.stringify(updatedProjects)
-    );
+      if (!response.ok) {
+        throw new Error("Delete failed");
+      }
 
-    setProjects(updatedProjects);
-    toast.success("Project Deleted 🚀");
+      toast.success("Project Deleted 🚀");
+      fetchProjects();
+    } catch (error) {
+      toast.error("Error deleting project ❌");
+    }
   };
 
-  // ✅ Edit Project
   const handleEdit = (id) => {
     navigate(`/admin/projects/edit/${id}`);
   };
@@ -88,28 +133,37 @@ const handleToggleVisibility = (id) => {
                 <tr key={project.id} className="border-t text-center">
                   <td className="p-3">
                     <img
-                      src={project.image}
+                      src={project.image_url}
                       alt="project"
                       className="h-16 mx-auto rounded"
-                    />
+                      />  
                   </td>
                   <td className="p-3">{project.title}</td>
-                  <td className="p-3">{project.tech}</td>
+                  <td className="p-3">
+                      {project.techstack?.map((tech, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-200 rounded mr-1"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </td>
                   <td className="p-3">{project.description}</td>
-                 <td className="p-3">
-  <button
-    onClick={() => handleToggleVisibility(project.id)}
-    className={`p-2 rounded-full text-white transition ${
-      project.showProject
-        ? "bg-green-500 hover:bg-green-600"
-        : "bg-red-700 hover:bg-red-500"
-    }`}
-  >
-   
-  </button>
-</td>
 
-                  {/* ✅ ACTION BUTTONS */}
+                  <td className="p-3">
+                    <td className="p-3">
+                    <button
+                      onClick={() => handleToggleVisibility(project.id)}
+                      className={`px-3 py-1 rounded text-white ${
+                        project.is_visible ? "bg-green-500" : "bg-red-600"
+                      }`}
+                    >
+                      {project.is_visible ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  </td>
+
                   <td className="p-3 space-x-2">
                     <button
                       onClick={() => handleEdit(project.id)}

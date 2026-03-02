@@ -1,17 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth(); // assuming user contains token & is_admin
+  
 
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
-
+// ✅ Prevent logged-in user from accessing login page
+  useEffect(() => {
+    if (user?.token) {
+      if (user?.is_admin) {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [user, navigate]);
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };

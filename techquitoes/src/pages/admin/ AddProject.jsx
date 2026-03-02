@@ -16,7 +16,7 @@ const AddProject = () => {
   useEffect(() => {
     const checkuser = ChecKUser();
     if (!checkuser) {
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   }, [navigate]);
 
@@ -28,16 +28,26 @@ const AddProject = () => {
 
       if (!token) {
         toast.error("Unauthorized ❌ Please login again");
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
 
+      // ✅ Convert tech string to array
+      const techArray = tech.split(",").map((item) => item.trim());
+
       const formData = new FormData();
       formData.append("title", title);
-      formData.append("tech", tech);
       formData.append("description", description);
-      formData.append("show_project", showProject);
-      formData.append("image", image);
+      formData.append("is_visible", showProject);
+
+      // ✅ Append each tech item properly
+      techArray.forEach((item) => {
+        formData.append("techstack", item);
+      });
+
+      if (image) {
+        formData.append("image", image);
+      }
 
       const response = await fetch(
         "http://127.0.0.1:8000/api/projects/",
@@ -50,17 +60,19 @@ const AddProject = () => {
         }
       );
 
-      const data = await response.json()
-      console.log("response data is : ", data)
+      const data = await response.json();
+      console.log("response data is : ", data);
+
       if (!response.ok) {
-        throw new Error("Failed to create project");
+        throw new Error(data.detail || "Failed to create project");
       }
 
       toast.success("Project Added Successfully 🚀");
-      navigate("/admin/projects");
+      navigate("/admin/projects", { replace: true });
+
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong ❌");
+      toast.error(error.message || "Something went wrong ❌");
     }
   };
 
@@ -83,7 +95,7 @@ const AddProject = () => {
 
         <input
           type="text"
-          placeholder="Tech Stack"
+          placeholder="Tech Stack (comma separated)"
           className="w-full border p-3 rounded-lg"
           value={tech}
           onChange={(e) => setTech(e.target.value)}
@@ -103,7 +115,6 @@ const AddProject = () => {
           accept="image/*"
           className="w-full"
           onChange={(e) => setImage(e.target.files[0])}
-          required
         />
 
         <label className="flex items-center gap-2">

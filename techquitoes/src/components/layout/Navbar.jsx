@@ -22,7 +22,7 @@ const { user, logout } = useAuth();
         : "/case-study"
     );
 const isAdminPage = location.pathname.startsWith("/admin");
-
+const isAdmin = localStorage.getItem("is_admin") === "true";
 
 //.......Logout
 //  const logout = () => {
@@ -71,7 +71,7 @@ const checkuser=ChecKUser()
               ))}
             </ul>
           )}
-       {checkuser && (
+       {(checkuser && isAdmin) &&(
   <Button
     onClick={() =>
       navigate(location.pathname === "/admin" ? "/" : "/admin")
@@ -80,6 +80,8 @@ const checkuser=ChecKUser()
     {location.pathname === "/admin" ? "Home" : "Dashboard"}
   </Button>
 )}
+
+
           <Button onClick={handleCase}>
             {location.pathname === "/case-study" ||
             location.pathname === "/form"
